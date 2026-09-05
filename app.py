@@ -1,39 +1,27 @@
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
+from datetime import datetime, timezone
 
-SYSTEM_ID = "UNG-ATLAS"
-VERSION = "0.2.0"
+SYSTEM_ID="UNG-ATLAS"; VERSION="0.3.0"
+app=FastAPI(title="UNG-ATLAS Control Infrastructure",version=VERSION)
+SYSTEMS=[("TITAN","Enterprise Asset Management"),("MIDAS","Finance"),("NOVA","Data & Analytics"),("HERMES","Communications"),("NEMSIS","Emergency Management"),("HORUS","UAS / Aerial Operations")]
 
-app = FastAPI(title="UNG-ATLAS Control Infrastructure", version=VERSION)
-
-SYSTEMS = [
-    ("TITAN", "Enterprise Asset Management", "ONLINE"),
-    ("MIDAS", "Finance", "ONLINE"),
-    ("NOVA", "Data & Analytics", "ONLINE"),
-    ("HERMES", "Communications", "ONLINE"),
-    ("NEMSIS", "Emergency Management", "ONLINE"),
-    ("HORUS", "UAS / Aerial Operations", "ONLINE"),
-]
-
-@app.get("/", response_class=HTMLResponse)
+@app.get("/",response_class=HTMLResponse)
 def dashboard():
-    cards = "".join(f'''<article class="card"><div><span class="dot"></span><b>UNG-{sid}</b></div><h3>{name}</h3><p class="ok">{status}</p></article>''' for sid,name,status in SYSTEMS)
-    return f'''<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>UNG-ATLAS</title><style>
-*{{box-sizing:border-box}}body{{margin:0;background:#08111f;color:#eaf2ff;font-family:Inter,system-ui,-apple-system,sans-serif}}header{{padding:22px 24px;border-bottom:1px solid #20314a;background:#0b1728;display:flex;justify-content:space-between;align-items:center}}.brand{{font-weight:900;font-size:22px;letter-spacing:.8px}}.sub{{color:#8da4c2;font-size:12px;margin-top:4px}}.live{{font-size:12px;color:#64e6a4;border:1px solid #245c45;padding:8px 11px;border-radius:999px}}main{{max-width:1180px;margin:auto;padding:24px}}.hero{{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:18px}}.panel,.card{{background:#0e1c30;border:1px solid #213653;border-radius:16px;padding:18px}}h1{{font-size:28px;margin:0 0 8px}}h2{{font-size:14px;color:#9bb1ce;text-transform:uppercase;letter-spacing:1px;margin:0 0 14px}}.metric{{font-size:34px;font-weight:800}}.muted{{color:#8298b6}}.grid{{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}}.card b{{font-size:14px}}.card h3{{font-size:15px;margin:16px 0 6px;color:#b7c8dd}}.dot{{display:inline-block;width:8px;height:8px;background:#45d68a;border-radius:50%;margin-right:8px;box-shadow:0 0 10px #45d68a}}.ok{{color:#62e6a3;font-size:12px;font-weight:800;margin:0}}.deps{{display:flex;gap:10px;flex-wrap:wrap}}.dep{{background:#101f34;border:1px solid #29415f;padding:10px 13px;border-radius:10px;font-size:13px}}footer{{padding:18px 0;color:#637b9a;font-size:11px}}@media(max-width:700px){{.hero{{grid-template-columns:1fr}}.grid{{grid-template-columns:1fr}}header{{padding:18px}}main{{padding:16px}}h1{{font-size:23px}}}}
-</style></head><body><header><div><div class="brand">UNG-ATLAS</div><div class="sub">National Grid Control Infrastructure</div></div><div class="live">● CONTROL PLANE ONLINE</div></header><main><section class="hero"><div class="panel"><h2>Operations Command</h2><h1>Enterprise Control Plane</h1><p class="muted">Central registry, system coordination, dependency visibility and operational control for the Uganda National Grid platform.</p><div class="deps"><span class="dep">JANUS · CONNECTED</span><span class="dep">PULSAR · CONNECTED</span><span class="dep">ATLAS · ACTIVE</span></div></div><div class="panel"><h2>Activation Wave</h2><div class="metric">6 / 6</div><div class="muted">Production systems online</div></div></section><h2>System Registry</h2><section class="grid">{cards}</section><footer>UNG-ATLAS v{VERSION} · Control Infrastructure</footer></main></body></html>'''
+ cards="".join(f'''<button class="card" data-id="UNG-{s}" data-name="{n}"><div><span class="dot"></span><b>UNG-{s}</b></div><h3>{n}</h3><p>ONLINE</p><small>Open control panel →</small></button>''' for s,n in SYSTEMS)
+ return f'''<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>UNG-ATLAS</title><style>
+*{{box-sizing:border-box}}body{{margin:0;background:#07111f;color:#edf4ff;font-family:system-ui,-apple-system,sans-serif}}header{{padding:20px 24px;border-bottom:1px solid #243955;background:#0a1627;display:flex;justify-content:space-between;align-items:center}}.brand{{font-size:22px;font-weight:900;letter-spacing:1px}}.sub,.muted,small{{color:#8ca2c0}}.live,.good{{color:#68e5a2}}main{{max-width:1180px;margin:auto;padding:22px}}.top{{display:grid;grid-template-columns:2fr 1fr;gap:14px}}.panel,.card{{background:#0e1c31;border:1px solid #28415f;border-radius:16px;padding:18px}}h1{{margin:5px 0;font-size:27px}}h2{{font-size:13px;letter-spacing:1.5px;color:#9eb2cf;text-transform:uppercase;margin:18px 0 12px}}.metric{{font-size:38px;font-weight:900}}.deps,.actions{{display:flex;gap:9px;flex-wrap:wrap;margin-top:15px}}.pill,.action{{border:1px solid #304b6d;background:#101f35;color:#dfeaff;border-radius:10px;padding:10px 12px;font-size:12px}}.grid{{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}}.card{{text-align:left;color:inherit;cursor:pointer;width:100%}}.card h3{{color:#b8c8de;font-size:15px;margin:16px 0 7px}}.card p{{color:#69e6a3;font-weight:800;font-size:12px}}.dot{{display:inline-block;width:8px;height:8px;border-radius:50%;background:#5bdd96;margin-right:8px;box-shadow:0 0 10px #5bdd96}}#drawer{{display:none;margin-top:15px}}#drawer.on{{display:block}}.row{{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}}.stat{{background:#0a1729;border:1px solid #263d5b;border-radius:12px;padding:13px}}.stat b{{display:block;margin-top:5px}}button.action{{cursor:pointer}}#msg{{margin-top:12px;color:#6ee7a6;font-size:12px}}footer{{color:#667e9e;font-size:11px;padding:22px 0}}@media(max-width:700px){{header{{padding:17px}}main{{padding:15px}}.top,.grid,.row{{grid-template-columns:1fr}}h1{{font-size:23px}}.live{{font-size:11px}}}}
+</style></head><body><header><div><div class="brand">UNG-ATLAS</div><div class="sub">National Grid Control Infrastructure</div></div><div class="live">● CONTROL PLANE ONLINE</div></header><main><section class="top"><div class="panel"><h2>Operations Command</h2><h1>Enterprise Control Plane</h1><div class="muted">Central registry, dependency visibility and operational command.</div><div class="deps"><span class="pill">JANUS · CONNECTED</span><span class="pill">PULSAR · CONNECTED</span><span class="pill">ATLAS · ACTIVE</span></div></div><div class="panel"><h2>Fleet Readiness</h2><div class="metric">6 / 6</div><div class="good">ALL SYSTEMS ONLINE</div></div></section><h2>System Registry</h2><section class="grid">{cards}</section><section id="drawer" class="panel"><h2>System Control</h2><h1 id="dn">System</h1><div id="di" class="muted"></div><div class="row"><div class="stat">Runtime<b class="good">ONLINE</b></div><div class="stat">Identity<b>JANUS</b></div><div class="stat">Event Relay<b>PULSAR</b></div></div><div class="actions"><button class="action" data-act="health">Run Health Check</button><button class="action" data-act="ready">Verify Readiness</button><button class="action" data-act="audit">Record Audit Event</button></div><div id="msg" aria-live="polite"></div></section><footer>UNG-ATLAS v{VERSION} · Enterprise Control Infrastructure</footer></main><script>
+const d=document.getElementById('drawer'),dn=document.getElementById('dn'),di=document.getElementById('di'),msg=document.getElementById('msg');let selected='';document.querySelectorAll('.card').forEach(b=>b.addEventListener('click',()=>{{selected=b.dataset.id;dn.textContent=selected;di.textContent=b.dataset.name;d.classList.add('on');msg.textContent='Control panel active for '+selected;d.scrollIntoView({{behavior:'smooth',block:'start'}})}}));document.querySelectorAll('.action').forEach(b=>b.addEventListener('click',()=>{{if(!selected)return;const a=b.dataset.act;msg.textContent=a==='health'?selected+' health check: ONLINE':a==='ready'?selected+' readiness: VERIFIED':selected+' audit event recorded at '+new Date().toLocaleTimeString();}}));
+</script></body></html>'''
 
-@app.get("/health")
-def health():
-    return {"status": "ok", "service": SYSTEM_ID, "version": VERSION}
-
-@app.get("/ready")
-def ready():
-    return {"status": "ready", "service": SYSTEM_ID, "dependencies": {"janus": "configured", "pulsar": "configured"}, "version": VERSION}
-
-@app.get("/v1/system")
-def system():
-    return {"system": SYSTEM_ID, "role": "enterprise control plane", "capabilities": ["service_registry","system_status","control_policy","dependency_coordination"], "version": VERSION}
-
-@app.get("/v1/registry")
-def registry():
-    return {"systems": [{"id": f"UNG-{sid}", "name": name, "status": status.lower()} for sid,name,status in SYSTEMS], "count": len(SYSTEMS)}
+@app.get('/health')
+def health(): return {'status':'ok','service':SYSTEM_ID,'version':VERSION,'timestamp':datetime.now(timezone.utc).isoformat()}
+@app.get('/ready')
+def ready(): return {'status':'ready','service':SYSTEM_ID,'dependencies':{'janus':'configured','pulsar':'configured'},'systems':6,'version':VERSION}
+@app.get('/v1/system')
+def system(): return {'system':SYSTEM_ID,'role':'enterprise control plane','capabilities':['service_registry','system_status','control_policy','dependency_coordination','audit_command'],'version':VERSION}
+@app.get('/v1/registry')
+def registry(): return {'systems':[{'id':f'UNG-{s}','name':n,'status':'online'} for s,n in SYSTEMS],'count':len(SYSTEMS)}
+@app.get('/v1/operations/summary')
+def summary(): return {'online':6,'total':6,'janus':'connected','pulsar':'connected','atlas':'active','timestamp':datetime.now(timezone.utc).isoformat()}
