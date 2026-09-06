@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse,RedirectResponse
 from datetime import datetime,timezone
 import os,json,urllib.request,time
-SYSTEM_ID='UNG-ATLAS';VERSION='0.7.0';app=FastAPI(title='UNG-ATLAS',version=VERSION)
-SYSTEMS={'TITAN':('Enterprise Asset Management',['Assets','Work Orders','Maintenance']),'MIDAS':('Finance',['Accounts','Transactions','Approvals']),'NOVA':('Data & Analytics',['Datasets','Analytics','Reports']),'HERMES':('Communications',['Messages','Channels','Delivery']),'NEMSIS':('Emergency Management',['Incidents','Response','Continuity']),'HORUS':('UAS / Aerial Operations',['Aircraft','Missions','Flight Ops']),'ORION':('National Operations Command',['Operations','Situational Awareness','Command'])}
+SYSTEM_ID='UNG-ATLAS';VERSION='0.8.0';app=FastAPI(title='UNG-ATLAS',version=VERSION)
+SYSTEMS={'TITAN':('Enterprise Asset Management',['Assets','Work Orders','Maintenance']),'MIDAS':('Finance',['Accounts','Transactions','Approvals']),'NOVA':('Data & Analytics',['Datasets','Analytics','Reports']),'HERMES':('Communications',['Messages','Channels','Delivery']),'NEMSIS':('Emergency Management',['Incidents','Response','Continuity']),'HORUS':('UAS / Aerial Operations',['Aircraft','Missions','Flight Ops']),'ORION':('National Operations Command',['Operations','Situational Awareness','Command']),'MDM':('Master Data Management',['Master Records','Reference Data','Data Quality'])}
 def probe(s,path='/health'):
  u=os.getenv(f'{s}_BASE_URL','').rstrip('/');t=time.perf_counter()
  if not u:return {'status':'unconfigured','latency_ms':None}
