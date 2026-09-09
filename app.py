@@ -4,8 +4,8 @@ from pydantic import BaseModel, Field
 from datetime import datetime,timezone
 import os,json,urllib.request,time
 from capability_registry import registry
-SYSTEM_ID='UNG-ATLAS';VERSION='0.9.4';app=FastAPI(title='UNG-ATLAS',version=VERSION)
-SYSTEMS={'TITAN':('Enterprise Asset Management',['Assets','Work Orders','Maintenance']),'MIDAS':('Finance',['Accounts','Transactions','Approvals']),'NOVA':('Data & Analytics',['Datasets','Analytics','Reports']),'HERMES':('Communications',['Messages','Channels','Delivery']),'NEMSIS':('Emergency Management',['Incidents','Response','Continuity']),'HORUS':('UAS / Aerial Operations',['Aircraft','Missions','Flight Ops']),'ORION':('National Operations Command',['Operations','Situational Awareness','Command']),'MDM':('Master Data Management',['Master Records','Reference Data','Data Quality']),'NEXUS':('Integration & Interoperability',['Interoperability','API Routing','Connectors','Envelope']),'PULSAR':('Data Relay',['Messaging','Delivery','Queue','Retry','DLQ','Fanout'])}
+SYSTEM_ID='UNG-ATLAS';VERSION='1.0.0';app=FastAPI(title='UNG-ATLAS',version=VERSION)
+SYSTEMS={'TITAN':('Enterprise Asset Management',['Assets','Work Orders','Maintenance']),'MIDAS':('Finance',['Accounts','Transactions','Approvals']),'NOVA':('Data & Analytics',['Datasets','Analytics','Reports']),'HERMES':('Communications',['Messages','Channels','Delivery']),'NEMSIS':('Emergency Management',['Incidents','Response','Continuity']),'HORUS':('UAS / Aerial Operations',['Aircraft','Missions','Flight Ops']),'ORION':('National Operations Command',['Operations','Situational Awareness','Command']),'MDM':('Master Data Management',['Master Records','Reference Data','Data Quality']),'NEXUS':('Integration & Interoperability',['Interoperability','API Routing','Connectors','Envelope']),'PULSAR':('Data Relay',['Messaging','Delivery','Queue','Retry','DLQ','Fanout']),'EDGE':('Physical Edge Compute',['Nodes','Telemetry','Field Gateways'])}
 for sid,(name,mods) in SYSTEMS.items():registry.register(sid,name,os.getenv(f'{sid}_BASE_URL',''),mods)
 class ServiceIn(BaseModel):system_id:str=Field(min_length=2,max_length=80);name:str=Field(min_length=1,max_length=160);base_url:str='';capabilities:list[str]=Field(default_factory=list);kind:str='internal';active:bool=True
 def rec(r):return {'system_id':r.system_id,'name':r.name,'base_url':r.base_url,'capabilities':sorted(r.capabilities),'kind':r.kind,'active':r.active,'updated_at':r.updated_at}
@@ -25,18 +25,18 @@ def workspace(sid:str):
  sid=sid.upper()
  if sid not in SYSTEMS:return RedirectResponse('/')
  name,mods=SYSTEMS[sid];p=probe(sid);cl='good' if p['status']=='online' else 'bad';tabs=''.join(f'<a href="/systems/{sid}/modules/{i}">{m}</a>' for i,m in enumerate(mods));tiles=''.join(f'<a class="tile" href="/systems/{sid}/modules/{i}"><small>MODULE</small><h2>{m}</h2><p class="good">OPEN →</p></a>' for i,m in enumerate(mods))
- return f'''<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>{C()}</style></head><body><header><a class="back" href="/">← ATLAS</a><div class="brand">UNG-{sid}</div><small>{name}</small></header><main><div class="nav"><a href="/systems/{sid}">Overview</a>{tabs}<a href="/systems/{sid}/api">API Console</a></div><div class="row"><div class="panel"><small>RUNTIME</small><div class="metric {cl}">{p['status'].upper()}</div></div><div class="panel"><small>LATENCY</small><div class="metric">{p['latency_ms'] or '—'} ms</div></div><div class="panel"><small>ENVIRONMENT</small><div class="metric">PROD</div></div></div><h3>Modules</h3><div class="grid">{tiles}</div><h3>Live Operations</h3><div class="panel"><button class="btn" onclick="run('/health')">Run Health</button> <button class="btn" onclick="run('/ready')">Run Readiness</button><pre id="out">Select an operation.</pre></div></main><script>async function run(p){{let o=document.getElementById('out');o.textContent='Running...';let r=await fetch('/v1/probe/{sid}?path='+encodeURIComponent(p));o.textContent=JSON.stringify(await r.json(),null,2)}}</script></body></html>'''
+ return f'<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>{C()}</style></head><body><header><a class="back" href="/">← ATLAS</a><div class="brand">UNG-{sid}</div><small>{name}</small></header><main><div class="nav"><a href="/systems/{sid}">Overview</a>{tabs}<a href="/systems/{sid}/api">API Console</a></div><div class="row"><div class="panel"><small>RUNTIME</small><div class="metric {cl}">{p["status"].upper()}</div></div><div class="panel"><small>LATENCY</small><div class="metric">{p["latency_ms"] or "—"} ms</div></div><div class="panel"><small>ENVIRONMENT</small><div class="metric">PROD</div></div></div><h3>Modules</h3><div class="grid">{tiles}</div></main></body></html>'
 @app.get('/systems/{sid}/modules/{idx}',response_class=HTMLResponse)
 def module(sid:str,idx:int):
  sid=sid.upper()
  if sid not in SYSTEMS or idx<0 or idx>=len(SYSTEMS[sid][1]):return RedirectResponse(f'/systems/{sid}')
- name,mods=SYSTEMS[sid];m=mods[idx];return f'''<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>{C()}</style></head><body><header><a class="back" href="/systems/{sid}">← UNG-{sid}</a><div class="brand">{m}</div><small>{name}</small></header><main><div class="panel"><small>LIVE MODULE</small><h1>{m}</h1><p class="muted">Production service inspection and API discovery.</p><button class="btn" onclick="load('/v1/system')">Load System Data</button><button class="btn" onclick="load('/health')">Health</button><button class="btn" onclick="load('/ready')">Readiness</button><pre id="out">Tap an action to load live data.</pre></div></main><script>async function load(p){{let o=document.getElementById('out');o.textContent='Loading '+p+'...';let r=await fetch('/v1/proxy/{sid}?path='+encodeURIComponent(p));o.textContent=JSON.stringify(await r.json(),null,2)}}</script></body></html>'''
+ return workspace(sid)
 @app.get('/systems/{sid}/api',response_class=HTMLResponse)
-def console(sid:str):return module(sid,0) if sid.upper() in SYSTEMS else RedirectResponse('/')
+def console(sid:str):return workspace(sid) if sid.upper() in SYSTEMS else RedirectResponse('/')
 @app.get('/health')
 def health():return {'status':'ok','service':SYSTEM_ID,'version':VERSION,'registry_services':len(registry.list())}
 @app.get('/v1/system')
-def system():return {'system_id':SYSTEM_ID,'version':VERSION,'domain':'enterprise-control-infrastructure','capabilities':['service-registry','capability-discovery','health-probing','operational-activity','operational-reporting','csv-export']}
+def system():return {'system_id':SYSTEM_ID,'version':VERSION,'domain':'enterprise-control-infrastructure','capabilities':['service-registry','capability-discovery','health-probing','edge-node-registry','edge-heartbeats','edge-telemetry']}
 @app.post('/v1/registry/services')
 def register_service(p:ServiceIn):return rec(registry.register(p.system_id,p.name,p.base_url,p.capabilities,p.kind,p.active))
 @app.get('/v1/registry/services')
@@ -50,15 +50,9 @@ def get_service(sid:str):
 def discover(capability:str):return {'capability':capability,'services':[rec(r) for r in registry.discover(capability)]}
 @app.get('/v1/probe/{sid}')
 def live_probe(sid:str,path:str='/health'):return probe(sid,path if path in ['/health','/ready'] else '/health')
-@app.get('/v1/proxy/{sid}')
-def proxy(sid:str,path:str='/health'):
- if path not in ['/health','/ready','/v1/system']:return {'error':'endpoint_not_allowed'}
- r=registry.get(sid)
- if not r:return {'error':'system_not_found'}
- return probe(r.system_id,path)
 @app.get('/v1/telemetry')
 def telemetry():
  x=[dict(id=r.system_id,**probe(r.system_id)) for r in registry.list(active_only=True)];return {'systems':x,'online':sum(v['status']=='online' for v in x),'total':len(x),'timestamp':datetime.now(timezone.utc).isoformat()}
-
 from operations_feed import router as operations_router
-app.include_router(operations_router)
+from edge_nodes import router as edge_router
+app.include_router(operations_router);app.include_router(edge_router)
