@@ -1,0 +1,33 @@
+name: Whole Network Mock Test Harness
+
+on:
+  push:
+    branches: [feature/network-mock-test-run]
+    paths:
+      - 'network_test/**'
+      - 'tests/test_*network*.py'
+      - 'tests/test_dataco_batches.py'
+      - '.github/workflows/network-mock-test.yml'
+  pull_request:
+    paths:
+      - 'network_test/**'
+      - 'tests/test_*network*.py'
+      - 'tests/test_dataco_batches.py'
+      - '.github/workflows/network-mock-test.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile harness
+        run: python -m compileall network_test
+      - name: Install pytest
+        run: python -m pip install pytest
+      - name: Run network harness acceptance tests
+        run: python -m pytest -q tests/test_dataco_batches.py tests/test_network_runner.py
