@@ -18,6 +18,8 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -28,4 +30,4 @@ jobs:
       - name: Install pytest
         run: python -m pip install pytest
       - name: Run network harness acceptance tests
-        run: pytest -q tests/test_dataco_batches.py tests/test_network_runner.py
+        run: python -m pytest -q tests/test_dataco_batches.py tests/test_network_runner.py
