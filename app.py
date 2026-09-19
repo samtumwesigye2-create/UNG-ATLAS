@@ -78,7 +78,9 @@ def module(sid:str,idx:int):
  if sid not in SYSTEMS or idx<0 or idx>=len(SYSTEMS[sid][1]):return RedirectResponse(f'/systems/{sid}')
  return workspace(sid)
 @app.get('/systems/{sid}/api',response_class=HTMLResponse)
-def console(sid:str):\n sid=sid.upper().removeprefix('UNG-');return workspace(sid) if sid in SYSTEMS else RedirectResponse('/')
+def console(sid:str):
+ sid=sid.upper().removeprefix('UNG-')
+ return workspace(sid) if sid in SYSTEMS else RedirectResponse('/')
 @app.get('/health')
 def health():return {'status':'ok','service':SYSTEM_ID,'version':VERSION,'registry_services':len(registry.list())}
 @app.get('/v1/system')
