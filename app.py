@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime,timezone
 import os,json,urllib.request,time
 from capability_registry import registry
-SYSTEM_ID='UNG-ATLAS';VERSION='1.0.0';app=FastAPI(title='UNG-ATLAS',version=VERSION)
+SYSTEM_ID='UNG-ATLAS';VERSION='1.1.0';app=FastAPI(title='UNG-ATLAS',version=VERSION)
 SYSTEMS={'TITAN':('Enterprise Asset Management',['Assets','Work Orders','Maintenance']),'MIDAS':('Finance',['Accounts','Transactions','Approvals']),'NOVA':('Data & Analytics',['Datasets','Analytics','Reports']),'HERMES':('Communications',['Messages','Channels','Delivery']),'NEMSIS':('Emergency Management',['Incidents','Response','Continuity']),'HORUS':('UAS / Aerial Operations',['Aircraft','Missions','Flight Ops']),'ORION':('National Operations Command',['Operations','Situational Awareness','Command']),'MDM':('Master Data Management',['Master Records','Reference Data','Data Quality']),'NEXUS':('Integration & Interoperability',['Interoperability','API Routing','Connectors','Envelope']),'PULSAR':('Data Relay',['Messaging','Delivery','Queue','Retry','DLQ','Fanout']),'EDGE':('Physical Edge Compute',['Nodes','Telemetry','Field Gateways'])}
 for sid,(name,mods) in SYSTEMS.items():registry.register(sid,name,os.getenv(f'{sid}_BASE_URL',''),mods)
 class ServiceIn(BaseModel):system_id:str=Field(min_length=2,max_length=80);name:str=Field(min_length=1,max_length=160);base_url:str='';capabilities:list[str]=Field(default_factory=list);kind:str='internal';active:bool=True
@@ -36,7 +36,7 @@ def console(sid:str):return workspace(sid) if sid.upper() in SYSTEMS else Redire
 @app.get('/health')
 def health():return {'status':'ok','service':SYSTEM_ID,'version':VERSION,'registry_services':len(registry.list())}
 @app.get('/v1/system')
-def system():return {'system_id':SYSTEM_ID,'version':VERSION,'domain':'enterprise-control-infrastructure','capabilities':['service-registry','capability-discovery','health-probing','edge-node-registry','edge-heartbeats','edge-telemetry']}
+def system():return {'system_id':SYSTEM_ID,'version':VERSION,'domain':'enterprise-control-infrastructure','capabilities':['service-registry','capability-discovery','health-probing','edge-node-registry','edge-heartbeats','edge-telemetry','national-operations-status','unified-tracing','tamper-evident-evidence','dependency-registry','disaster-recovery','machine-credential-registry','policy-engine','classification-registry','records-management','observability','integration-certification','cmdb']}
 @app.post('/v1/registry/services')
 def register_service(p:ServiceIn):return rec(registry.register(p.system_id,p.name,p.base_url,p.capabilities,p.kind,p.active))
 @app.get('/v1/registry/services')
@@ -53,6 +53,7 @@ def live_probe(sid:str,path:str='/health'):return probe(sid,path if path in ['/h
 @app.get('/v1/telemetry')
 def telemetry():
  x=[dict(id=r.system_id,**probe(r.system_id)) for r in registry.list(active_only=True)];return {'systems':x,'online':sum(v['status']=='online' for v in x),'total':len(x),'timestamp':datetime.now(timezone.utc).isoformat()}
+from control_plane import router as control_router
 from operations_feed import router as operations_router
 from edge_nodes import router as edge_router
-app.include_router(operations_router);app.include_router(edge_router)
+app.include_router(operations_router);app.include_router(edge_router);app.include_router(control_router)
