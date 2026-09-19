@@ -5,7 +5,38 @@ from datetime import datetime,timezone
 import os,json,urllib.request,time
 from capability_registry import registry
 SYSTEM_ID='UNG-ATLAS';VERSION='1.1.0';app=FastAPI(title='UNG-ATLAS',version=VERSION)
-SYSTEMS={'TITAN':('Enterprise Asset Management',['Assets','Work Orders','Maintenance']),'MIDAS':('Finance',['Accounts','Transactions','Approvals']),'NOVA':('Data & Analytics',['Datasets','Analytics','Reports']),'HERMES':('Communications',['Messages','Channels','Delivery']),'NEMSIS':('Emergency Management',['Incidents','Response','Continuity']),'HORUS':('UAS / Aerial Operations',['Aircraft','Missions','Flight Ops']),'ORION':('National Operations Command',['Operations','Situational Awareness','Command']),'MDM':('Master Data Management',['Master Records','Reference Data','Data Quality']),'NEXUS':('Integration & Interoperability',['Interoperability','API Routing','Connectors','Envelope']),'PULSAR':('Data Relay',['Messaging','Delivery','Queue','Retry','DLQ','Fanout']),'EDGE':('Physical Edge Compute',['Nodes','Telemetry','Field Gateways'])}
+SYSTEMS={
+'ATLAS':('Enterprise Control Infrastructure',['Operations Status','Registry','Dependencies','Tracing']),
+'JANUS':('Identity & Access Management',['Identity','MFA','RBAC','Service Identity']),
+'NEXUS':('Integration & Interoperability',['Interoperability','API Routing','Connectors','Envelope']),
+'LAGRANGE':('Authenticated Service Transport',['Transport','Delivery','Authentication','Reliability']),
+'PULSAR':('Data Relay',['Messaging','Delivery','Queue','Retry']),
+'VAULT':('Cryptography & Protected Records',['Encryption','Military Vault','Digital SCIF','Receipts']),
+'HERMES':('Communications',['Messages','Channels','Delivery']),
+'ORION':('National Operations Command',['Operations','Situational Awareness','Command']),
+'APOLLO':('Planning & Intelligence',['Planning','Decision Support','Mission Analysis']),
+'NOVA':('Data & Analytics',['Datasets','Analytics','Reports']),
+'QUASAR':('Correlation & Fusion Analytics',['Correlation','Fusion','Analysis']),
+'HEPHA':('Sensor & Operational Fusion',['Sensors','Fusion','Operational Data']),
+'DRACO':('Detection, Reconnaissance, Analysis, Collection & Observation',['Collection','Reconnaissance','Surveillance','Detection']),
+'CONSTELLATION':('Satellite & Orbital Operations',['Tracking','Orbital Awareness','Space Operations']),
+'HORUS':('UAS / Aerial Operations',['Aircraft','Missions','Flight Ops']),
+'AEGIS':('Protection & Security',['Protection','Security Operations','Controls']),
+'SENTINEL':('Security Operations Center',['Monitoring','Alerts','Incidents','Audit']),
+'NEMSIS':('Emergency Management',['Incidents','Response','Continuity']),
+'VECTOR':('Warehouse & Logistics',['Inventory','Receiving','Dispatch']),
+'MERCURY':('Parcel Processing',['Processing','Sorting','Handoff']),
+'UGASHIP':('Shipping & Tracking',['Shipments','Tracking','Delivery']),
+'UNG-PROCURE':('Procurement & Demand Intelligence',['Procurement','Demand','Suppliers']),
+'TITAN':('Enterprise Asset Management',['Assets','Work Orders','Maintenance']),
+'UGAMAP':('Mapping & Routing',['Mapping','Routing','Geospatial']),
+'MIDAS':('Finance',['Accounts','Transactions','Approvals']),
+'URA-PROMET':('Public Revenue Operations, Management & Electronic Taxation',['Revenue','Tax','Administration']),
+'UGAFORCE-HR':('Workforce & Human Resources',['Workforce','Personnel','Administration']),
+'PRESIDENT':('Executive Digital Operations',['Executive','Assignments','Service Delivery','Audit']),
+'UNG-WAVE':('Wireless Access & Virtualized Edge',['Edge Nodes','Routing','Firewall','VPN']),
+'UNG-CAD':('Engineering & CAD Studio',['CAD','Engineering','Manufacturing'])
+}
 for sid,(name,mods) in SYSTEMS.items():registry.register(sid,name,os.getenv(f'{sid}_BASE_URL',''),mods)
 class ServiceIn(BaseModel):system_id:str=Field(min_length=2,max_length=80);name:str=Field(min_length=1,max_length=160);base_url:str='';capabilities:list[str]=Field(default_factory=list);kind:str='internal';active:bool=True
 def rec(r):return {'system_id':r.system_id,'name':r.name,'base_url':r.base_url,'capabilities':sorted(r.capabilities),'kind':r.kind,'active':r.active,'updated_at':r.updated_at}
@@ -19,7 +50,10 @@ def probe(s,path='/health'):
 def C():return '''*{box-sizing:border-box}body{margin:0;background:#07111f;color:#edf4ff;font-family:system-ui,-apple-system,sans-serif}header{padding:18px;background:#0a1627;border-bottom:1px solid #263d5b}.brand{font-size:21px;font-weight:900}.muted,small{color:#8da3c0}main{max-width:1100px;margin:auto;padding:16px}.panel,.tile{background:#0e1c31;border:1px solid #28415f;border-radius:15px;padding:17px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.tile{text-decoration:none;color:#edf4ff;display:block}.good{color:#65e3a0}.bad{color:#ff7d87}.nav{display:flex;gap:8px;overflow:auto;margin:14px 0}.nav a,.btn{white-space:nowrap;text-decoration:none;color:#dce9fb;background:#101f35;border:1px solid #304b6d;padding:10px 12px;border-radius:10px}.metric{font-size:32px;font-weight:900}.row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.back{color:#9fc5ff;text-decoration:none}pre{white-space:pre-wrap;background:#081525;border-radius:10px;padding:12px;color:#b9cbe1;max-height:360px;overflow:auto}@media(max-width:700px){.grid,.row{grid-template-columns:1fr}}'''
 @app.get('/',response_class=HTMLResponse)
 def home():
- cards=''.join(f'<a class="tile" href="/systems/{s}"><small>UNG SYSTEM</small><h2>UNG-{s}</h2><div>{v[0]}</div><p class="good">OPEN WORKSPACE →</p></a>' for s,v in SYSTEMS.items());return f'<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>{C()}</style></head><body><header><div class="brand">UNG-ATLAS</div><small>Enterprise Control Infrastructure · v{VERSION}</small></header><main><div class="panel"><small>OPERATIONS COMMAND</small><h1>System Workspaces</h1><p class="muted">Open a production system and operate its live interface.</p></div><h3>Production Systems</h3><div class="grid">{cards}</div></main></body></html>'
+ t=telemetry(); online=t['online']; total=t['total']; degraded=max(total-online,0)
+ rows=''.join(f'''<tr><td><b>UNG-{x["id"]}</b></td><td><span class="dot {"on" if x["status"]=="online" else "off"}"></span>{x["status"].upper()}</td><td>{x.get("latency_ms") or "—"} ms</td><td><a href="/systems/{x["id"]}">OPEN →</a></td></tr>''' for x in t['systems'])
+ css=C()+'''body{background:#050b14}.hero{background:linear-gradient(135deg,#0d2038,#0b1628);border:1px solid #294663;border-radius:18px;padding:22px}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}.kpi{background:#0d1b2d;border:1px solid #29425e;border-radius:14px;padding:15px}.kpi b{display:block;font-size:27px;margin-top:6px}.ops{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}.ops a{background:#0d1b2d;border:1px solid #29425e;border-radius:13px;padding:15px;color:#dce9fb;text-decoration:none}.ops strong{display:block;margin-bottom:5px}table{width:100%;border-collapse:collapse;background:#0c1829;border:1px solid #29425e;border-radius:14px;overflow:hidden}th,td{text-align:left;padding:12px;border-bottom:1px solid #203650}th{color:#8da3c0;font-size:12px}td a{color:#75e6a7;text-decoration:none}.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:7px}.on{background:#65e3a0}.off{background:#ff7d87}@media(max-width:700px){.kpis{grid-template-columns:1fr 1fr}.ops{grid-template-columns:1fr}table{font-size:13px}th,td{padding:9px}}'''
+ return f'''<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>{css}</style></head><body><header><div class="brand">UNG-ATLAS · NATIONAL OPERATIONS</div><small>Enterprise Control Infrastructure · v{VERSION}</small></header><main><section class="hero"><small>NATIONAL SYSTEMS STATUS</small><h1>Operations Control Board</h1><p class="muted">Live health, control, evidence and certification across the UNG architecture.</p></section><div class="kpis"><div class="kpi"><small>REGISTERED</small><b>{total}</b></div><div class="kpi"><small>ONLINE</small><b class="good">{online}</b></div><div class="kpi"><small>NEEDS ATTENTION</small><b class="bad">{degraded}</b></div><div class="kpi"><small>ENVIRONMENT</small><b>PROD</b></div></div><div class="ops"><a href="/v1/control/status"><strong>CONTROL PLANE</strong>12 operational controls</a><a href="/v1/control/dependencies"><strong>DEPENDENCIES</strong>Architecture dependency graph</a><a href="/v1/control/evidence/verify"><strong>EVIDENCE LEDGER</strong>Tamper-evident verification</a><a href="/v1/control/backups"><strong>DISASTER RECOVERY</strong>Backup and restore status</a><a href="/v1/control/certifications"><strong>CERTIFICATION</strong>Integration acceptance</a><a href="/v1/control/metrics"><strong>OBSERVABILITY</strong>Performance telemetry</a></div><h3>Live Systems</h3><table><thead><tr><th>SYSTEM</th><th>STATUS</th><th>LATENCY</th><th>WORKSPACE</th></tr></thead><tbody>{rows}</tbody></table></main></body></html>'''
 @app.get('/systems/{sid}',response_class=HTMLResponse)
 def workspace(sid:str):
  sid=sid.upper()
