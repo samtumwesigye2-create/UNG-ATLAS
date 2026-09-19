@@ -37,7 +37,19 @@ SYSTEMS={
 'UNG-WAVE':('Wireless Access & Virtualized Edge',['Edge Nodes','Routing','Firewall','VPN']),
 'UNG-CAD':('Engineering & CAD Studio',['CAD','Engineering','Manufacturing'])
 }
-for sid,(name,mods) in SYSTEMS.items():registry.register(sid,name,os.getenv(f'{sid}_BASE_URL',''),mods)
+BASE_URL_ALIASES={
+'ATLAS':'https://ung-atlas-production.up.railway.app',
+'JANUS':'https://ung-iam-production.up.railway.app',
+'NEXUS':'https://ung-nexus-production.up.railway.app',
+'LAGRANGE':'https://ung-lagrange-production.up.railway.app',
+'PULSAR':'https://ung-pulsar-production.up.railway.app',
+'VAULT':'https://ung-vault-production.up.railway.app',
+'SENTINEL':'https://ung-sentinel-production.up.railway.app',
+'DRACO':'https://ung-draco-production-f6b7.up.railway.app'
+}
+for sid,(name,mods) in SYSTEMS.items():
+ base=os.getenv(f'{sid}_BASE_URL','') or BASE_URL_ALIASES.get(sid,'')
+ registry.register(sid,name,base,mods)
 class ServiceIn(BaseModel):system_id:str=Field(min_length=2,max_length=80);name:str=Field(min_length=1,max_length=160);base_url:str='';capabilities:list[str]=Field(default_factory=list);kind:str='internal';active:bool=True
 def rec(r):return {'system_id':r.system_id,'name':r.name,'base_url':r.base_url,'capabilities':sorted(r.capabilities),'kind':r.kind,'active':r.active,'updated_at':r.updated_at}
 def probe(s,path='/health'):
@@ -51,7 +63,7 @@ def C():return '''*{box-sizing:border-box}body{margin:0;background:#07111f;color
 @app.get('/',response_class=HTMLResponse)
 def home():
  t=telemetry(); online=t['online']; total=t['total']; degraded=max(total-online,0)
- rows=''.join(f'''<tr><td><b>UNG-{x["id"]}</b></td><td><span class="dot {"on" if x["status"]=="online" else "off"}"></span>{x["status"].upper()}</td><td>{x.get("latency_ms") or "—"} ms</td><td><a href="/systems/{x["id"]}">OPEN →</a></td></tr>''' for x in t['systems'])
+ rows=''.join(f'''<tr><td><b>{x["id"] if x["id"].startswith("UNG-") else "UNG-"+x["id"]}</b></td><td><span class="dot {"on" if x["status"]=="online" else "off"}"></span>{x["status"].upper()}</td><td>{x.get("latency_ms") or "—"} ms</td><td><a href="/systems/{x["id"]}">DETAILS →</a></td></tr>''' for x in t['systems'])
  css=C()+'''body{background:#050b14}.hero{background:linear-gradient(135deg,#0d2038,#0b1628);border:1px solid #294663;border-radius:18px;padding:22px}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}.kpi{background:#0d1b2d;border:1px solid #29425e;border-radius:14px;padding:15px}.kpi b{display:block;font-size:27px;margin-top:6px}.ops{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}.ops a{background:#0d1b2d;border:1px solid #29425e;border-radius:13px;padding:15px;color:#dce9fb;text-decoration:none}.ops strong{display:block;margin-bottom:5px}table{width:100%;border-collapse:collapse;background:#0c1829;border:1px solid #29425e;border-radius:14px;overflow:hidden}th,td{text-align:left;padding:12px;border-bottom:1px solid #203650}th{color:#8da3c0;font-size:12px}td a{color:#75e6a7;text-decoration:none}.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:7px}.on{background:#65e3a0}.off{background:#ff7d87}@media(max-width:700px){.kpis{grid-template-columns:1fr 1fr}.ops{grid-template-columns:1fr}table{font-size:13px}th,td{padding:9px}}'''
  return f'''<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>{css}</style></head><body><header><div class="brand">UNG-ATLAS · NATIONAL OPERATIONS</div><small>Enterprise Control Infrastructure · v{VERSION}</small></header><main><section class="hero"><small>NATIONAL SYSTEMS STATUS</small><h1>Operations Control Board</h1><p class="muted">Live health, control, evidence and certification across the UNG architecture.</p></section><div class="kpis"><div class="kpi"><small>REGISTERED</small><b>{total}</b></div><div class="kpi"><small>ONLINE</small><b class="good">{online}</b></div><div class="kpi"><small>NEEDS ATTENTION</small><b class="bad">{degraded}</b></div><div class="kpi"><small>ENVIRONMENT</small><b>PROD</b></div></div><div class="ops"><a href="/v1/control/status"><strong>CONTROL PLANE</strong>12 operational controls</a><a href="/v1/control/dependencies"><strong>DEPENDENCIES</strong>Architecture dependency graph</a><a href="/v1/control/evidence/verify"><strong>EVIDENCE LEDGER</strong>Tamper-evident verification</a><a href="/v1/control/backups"><strong>DISASTER RECOVERY</strong>Backup and restore status</a><a href="/v1/control/certifications"><strong>CERTIFICATION</strong>Integration acceptance</a><a href="/v1/control/metrics"><strong>OBSERVABILITY</strong>Performance telemetry</a></div><h3>Live Systems</h3><table><thead><tr><th>SYSTEM</th><th>STATUS</th><th>LATENCY</th><th>WORKSPACE</th></tr></thead><tbody>{rows}</tbody></table></main></body></html>'''
 @app.get('/systems/{sid}',response_class=HTMLResponse)
