@@ -53,7 +53,7 @@ for sid,(name,mods) in SYSTEMS.items():
 class ServiceIn(BaseModel):system_id:str=Field(min_length=2,max_length=80);name:str=Field(min_length=1,max_length=160);base_url:str='';capabilities:list[str]=Field(default_factory=list);kind:str='internal';active:bool=True
 def rec(r):return {'system_id':r.system_id,'name':r.name,'base_url':r.base_url,'capabilities':sorted(r.capabilities),'kind':r.kind,'active':r.active,'updated_at':r.updated_at}
 def probe(s,path='/health'):
- r=registry.get(s);u=(r.base_url if r else os.getenv(f'{s}_BASE_URL','')).rstrip('/');t=time.perf_counter()
+ r=registry.get(s);u=(r.base_url if r else (os.getenv(f'{s}_BASE_URL','') or BASE_URL_ALIASES.get(s.replace('UNG-',''),''))).rstrip('/');t=time.perf_counter()
  if not u:return {'status':'unconfigured','latency_ms':None}
  try:
   with urllib.request.urlopen(u+path,timeout=3) as x:data=json.loads(x.read().decode());status=x.status
@@ -78,7 +78,7 @@ def module(sid:str,idx:int):
  if sid not in SYSTEMS or idx<0 or idx>=len(SYSTEMS[sid][1]):return RedirectResponse(f'/systems/{sid}')
  return workspace(sid)
 @app.get('/systems/{sid}/api',response_class=HTMLResponse)
-def console(sid:str):return workspace(sid) if sid.upper() in SYSTEMS else RedirectResponse('/')
+def console(sid:str):\n sid=sid.upper().removeprefix('UNG-');return workspace(sid) if sid in SYSTEMS else RedirectResponse('/')
 @app.get('/health')
 def health():return {'status':'ok','service':SYSTEM_ID,'version':VERSION,'registry_services':len(registry.list())}
 @app.get('/v1/system')
