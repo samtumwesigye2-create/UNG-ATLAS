@@ -4,7 +4,9 @@ from pydantic import BaseModel, Field
 from datetime import datetime,timezone
 import os,json,urllib.request,time
 from capability_registry import registry
+from scm import router as scm_router
 SYSTEM_ID='UNG-ATLAS';VERSION='1.1.0';app=FastAPI(title='UNG-ATLAS',version=VERSION)
+app.include_router(scm_router)
 SYSTEMS={
 'ATLAS':('Enterprise Control Infrastructure',['Operations Status','Registry','Dependencies','Tracing']),
 'JANUS':('Identity & Access Management',['Identity','MFA','RBAC','Service Identity']),
