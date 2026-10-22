@@ -1,0 +1,17 @@
+name: ATLAS Main Validation
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements.txt pytest
+      - run: python -m compileall -q app.py control_plane.py capability_registry.py network_test
+      - run: PYTHONPATH=. python -m pytest -q test_capability_registry.py tests/
